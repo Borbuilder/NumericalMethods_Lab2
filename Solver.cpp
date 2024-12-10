@@ -139,6 +139,31 @@ void Solver::calc_test_a(std::vector<double>& a_coefficients, int n)
 
 void Solver::calc_main_a(std::vector<double>& a, int n)
 {
+	const double step = 1.0 / static_cast<double>(n);
+	double x = step;
+	double x_half = step / 2.0;
+
+	while (x <= break_point)
+	{
+		a.push_back(k1(x_half));
+		x += step;
+		x_half += step;
+	}
+
+	a.push_back(step / ((break_point - x + step) / k1((break_point + x - step) / 2.0) + (x - break_point) / k2((x + break_point) / 2.0)));
+	x += step;
+	x_half += step;
+
+	while (x < 1.0)
+	{
+		a.push_back(k2(x_half));
+		x += step;
+		x_half += step;
+	}
+	if (std::abs(x - 1.0) < 1e-8)
+	{
+		a.push_back(k2(x_half));
+	}
 }
 
 void Solver::calc_test_d(std::vector<double>& d_coefficients, int n)
@@ -161,8 +186,26 @@ void Solver::calc_test_d(std::vector<double>& d_coefficients, int n)
 	}
 }
 
-void Solver::calc_main_d(std::vector<double>& a, int n)
+void Solver::calc_main_d(std::vector<double>& d, int n)
 {
+	const double step = 1.0 / static_cast<double>(n);
+	double x_half = step * 3.0 / 2.0;
+	double x = step;
+	while (x_half <= break_point)
+	{
+		d.push_back(q1(x));
+		x += step;
+		x_half += step;
+	}
+	d.push_back((q1((x_half - step + break_point) / 2.0) * (break_point - x_half + step) + q2((x_half + break_point) / 2.0) * (x_half - break_point)) / step);
+	x += step;
+	x_half += step;
+	while (x_half < 1.0)
+	{
+		d.push_back(q2(x));
+		x += step;
+		x_half += step;
+	}
 }
 
 void Solver::calc_test_phi(std::vector<double>& phi_coefficients, int n)
@@ -185,11 +228,64 @@ void Solver::calc_test_phi(std::vector<double>& phi_coefficients, int n)
 	}
 }
 
-void Solver::calc_main_phi(std::vector<double>& phi_coefficients, int n)
+void Solver::calc_main_phi(std::vector<double>& phi, int n)
 {
+	const double step = 1.0 / static_cast<double>(n);
+	double x_half = step * 3.0 / 2.0;
+	double x = step;
+
+	while (x_half <= break_point)
+	{
+		phi.push_back(q1(x));
+		x += step;
+		x_half += step;
+	}
+	phi.push_back((f1((x_half - step + break_point) / 2.0) * (break_point - x_half + step) + f2((x_half + break_point) / 2.0) * (x_half - break_point)) / step);
+	x += step;
+	x_half += step;
+	while (x_half < 1.0)
+	{
+		phi.push_back(f2(x));
+		x += step;
+		x_half += step;
+	}
 }
 
 
+
+void Solver::Calc_double_solution(std::vector<double>& double_solution, int n)
+{
+	std::vector<double> a_coefficients;
+	calc_a(a_coefficients, n, MAIN);
+	std::vector<double> d_coefficients;
+	calc_d(d_coefficients, n, MAIN);
+	std::vector<double> phi_coefficients;
+	calc_phi(phi_coefficients, n, MAIN);
+
+	const unsigned long long size = d_coefficients.size();
+	double step = 1.0 / static_cast<double>(2 * n);
+
+	//const unsigned long long size = d_coefficients.size();
+
+	std::vector<double> A(size);
+	std::vector<double> B(size);
+	std::vector<double> C(size);
+
+	for (unsigned long long i = 0; i < size; i++)
+	{
+		A[i] = a_coefficients[i] / (step * step);
+		B[i] = a_coefficients[i + 1] / (step * step);
+		C[i] = (a_coefficients[i] + a_coefficients[i + 1]) / (step * step) + d_coefficients[i];
+	}
+
+	double_solution = SolveMatrix(A, C, B, phi_coefficients, { 0.0, 0.0 }, { m1, m2 });
+
+	/*double_solution = std::vector<double>(n + 1);
+	for (unsigned long long i = 0; i < n + 1; i++)
+	{
+		double_solution[i] = tmp_sol[i * 2];
+	}*/
+}
 
 void Solver::Calc_real_solution(std::vector<double>& true_solution, int n)
 {
@@ -226,23 +322,32 @@ double Solver::Calc_differencies(const std::vector<double>& one, const std::vect
 		for (int i = 0; i < differencies.size(); ++i) {
 			differencies[i] = abs(one[i] - other[i]);
 
-			if (differencies[i] > maximum)
+			if (differencies[i] > maximum) {
 				maximum = differencies[i];
+				max_x_dif_pos = i;
+			}
 		}
 
 		return maximum;
 	}
 }
 
-void Solver::create_table(int n)
+void Solver::create_table(int n, MODE mode)
 {
+	std::vector<double> sol;
+	if (mode == TEST) {
+		 sol = real_solution;
+	}
+	if (mode == MAIN) {
+		sol = double_solution;
+	}
 	table.resize(num_solution.size());
 
 	double x = m1;
 	double step = 1.0 / static_cast<double>(n);
 
 	for (int i = 0; i < table.size(); ++i) {
-		table[i] = { static_cast<double>(i), x, real_solution[i], num_solution[i], differencies[i] };
+		table[i] = { static_cast<double>(i), x, sol[i], num_solution[i], differencies[i] };
 		x += step;
 	}
 }
@@ -272,11 +377,18 @@ void Solver::Solve(int nodes_num, MODE mode)
 		C[i] = (a_coefficients[i] + a_coefficients[i + 1]) / (step * step) + d_coefficients[i];
 	}
 
-	num_solution = SolveMatrix(A, C, B, phi_coefficients, { 0.0, 0.0 }, { m1, m2 });
-	Calc_real_solution(real_solution, n);
-	test_max_defference = Calc_differencies(num_solution, real_solution);
+	if (mode == TEST) {
+		num_solution = SolveMatrix(A, C, B, phi_coefficients, { 0.0, 0.0 }, { m1, m2 });
+		Calc_real_solution(real_solution, n);
+		max_defference = Calc_differencies(num_solution, real_solution);
+	}
+	if (mode == MAIN) {
+		num_solution = SolveMatrix(A, C, B, phi_coefficients, { 0.0, 0.0 }, { m1, m2 });
+		Calc_double_solution(double_solution, n);
+		max_defference = Calc_differencies(num_solution,double_solution);
+	}
 
-	create_table(n);
+	create_table(n,mode);
 }
 
 
@@ -301,7 +413,12 @@ std::vector<double>& Solver::get_differencies()
 	return differencies;
 }
 
-double Solver::get_test_max_diff()
+double Solver::get_max_diff()
 {
-	return test_max_defference;
+	return max_defference;
+}
+
+double Solver::get_x_diff()
+{
+	return table[max_x_dif_pos][1];;
 }

@@ -14,10 +14,12 @@ private:
 
     std::vector<std::vector<double>> table;
     std::vector<double> num_solution;
+    std::vector<double> double_solution;
     std::vector<double> real_solution;
     std::vector<double> differencies;
 
-    double test_max_defference{};
+    double max_x_dif_pos{};
+    double max_defference{};
     
     const double break_point = 0.4;
     const double m1 = 0.0;
@@ -45,11 +47,11 @@ private:
     void calc_test_phi(std::vector<double>& phi_coefficients, int n);
     void calc_main_phi(std::vector<double>& phi_coefficients, int n);
 
-
+    void Calc_double_solution(std::vector<double>& double_solution, int n);
     void Calc_real_solution(std::vector<double>& true_solution, int n);
     double Calc_differencies(const std::vector<double>& one, const std::vector<double>& other);
 
-    void create_table(int n);
+    void create_table(int n, MODE mode);
     
 
 public:
@@ -63,6 +65,7 @@ public:
     std::vector<double>& get_num_solution();
     std::vector<double>& get_real_solution();
     std::vector<double>& get_differencies();
-    double get_test_max_diff();
+    double get_max_diff();
+    double get_x_diff();
 };
 
