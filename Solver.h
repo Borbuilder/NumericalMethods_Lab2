@@ -24,48 +24,46 @@ private:
     const double break_point = 0.4;
     const double m1 = 0.0;
     const double m2 = 1.0;
-    int n{};
+    int nodes_number{};
+    double a{ 1.0 };
+    double b{ 0.0 };
+
+    double k1(double x, MODE mode);
+    double k2(double x, MODE mode);
+    double q1(double x, MODE mode);
+    double q2(double x, MODE mode);
+    double f1(double x, MODE mode);
+    double f2(double x, MODE mode);
 
 
-    double integral(const double high_border, const double low_border, double (*func)(std::optional<double>), std::optional<double> x = std::nullopt);
-    static double k1(std::optional<double> x = std::nullopt);
-    static double k2(std::optional<double> x = std::nullopt);
-    static double q1(std::optional<double> x = std::nullopt);
-    static double q2(std::optional<double> x = std::nullopt);
-    static double f1(std::optional<double> x = std::nullopt);
-    static double f2(std::optional<double> x = std::nullopt);
+    double calc_a(double x, double step, MODE mode);
+    double calc_d(double x, double step, MODE mode);
+    double calc_phi(double x, double step, MODE mode);
 
-
-    void calc_a(std::vector<double>& a_coefficients,int n, MODE mode);
-    void calc_d(std::vector<double>& d_coefficients, int n, MODE mode);
-    void calc_phi(std::vector<double>& phi_coefficients, int n, MODE mode);
-
-    void calc_test_a(std::vector<double>& a_coefficients, int n);
-    void calc_main_a(std::vector<double>& a_coefficients, int n);
-    void calc_test_d(std::vector<double>& d_coefficients, int n);
-    void calc_main_d(std::vector<double>& d_coefficients, int n);
-    void calc_test_phi(std::vector<double>& phi_coefficients, int n);
-    void calc_main_phi(std::vector<double>& phi_coefficients, int n);
 
     void Calc_double_solution(std::vector<double>& double_solution, int n);
     void Calc_real_solution(std::vector<double>& true_solution, int n);
     double Calc_differencies(const std::vector<double>& one, const std::vector<double>& other);
 
     void create_table(int n, MODE mode);
-    
+
 
 public:
 
     Solver();
     ~Solver();
-
+    
     void Solve(int nodes_num, MODE mode);
 
     std::vector<std::vector<double>>& get_table();
     std::vector<double>& get_num_solution();
     std::vector<double>& get_real_solution();
     std::vector<double>& get_differencies();
+    std::vector<double>& get_double_solution();
     double get_max_diff();
     double get_x_diff();
+    double get_step();
+    double get_break_point();
+    std::vector<double> get_diaposon();
 };
 
